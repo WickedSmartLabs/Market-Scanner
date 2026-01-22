@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from scanner.config.watchlist import WATCHLIST
 from scanner.analysis.analyze_symbol import analyze_symbol
 from scanner.storage.db import SessionLocal
@@ -5,10 +7,10 @@ from scanner.storage.analysis_models import AnalysisRun
 from scanner.alerts.discord import send_alert
 
 
+ALERT_COOLDOWN_MINUTES = 30
+
+
 def normalize_analysis_for_storage(analysis: dict) -> dict:
-    """
-    Convert all values to JSON-safe native Python types.
-    """
     summary = analysis["summary"]
     details = analysis["details"]
 
@@ -37,12 +39,10 @@ def normalize_analysis_for_storage(analysis: dict) -> dict:
     }
 
 
-def log_analysis(analysis: dict):
+def log_analysis(session, analysis: dict):
     normalized = normalize_analysis_for_storage(analysis)
     s = normalized["summary"]
     d = normalized["details"]
-
-    session = SessionLocal()
 
     row = AnalysisRun(
         symbol=s["symbol"],
@@ -61,10 +61,28 @@ def log_analysis(analysis: dict):
 
     session.add(row)
     session.commit()
-    session.close()
+
+
+def should_send_alert(session, summary: dict) -> bool:
+    cutoff = datetime.utcnow() - timedelta(minutes=ALERT_COOLDOWN_MINUTES)
+
+    recent_alert = (
+        session.query(AnalysisRun)
+        .filter(
+            AnalysisRun.symbol == summary["symbol"],
+            AnalysisRun.timeframe == summary["timeframe"],
+            AnalysisRun.status == "This is important",
+            AnalysisRun.created_at >= cutoff,
+        )
+        .order_by(AnalysisRun.created_at.desc())
+        .first()
+    )
+
+    return recent_alert is None
 
 
 def run_scan():
+    session = SessionLocal()
     results = []
 
     for asset_class, items in WATCHLIST.items():
@@ -76,15 +94,17 @@ def run_scan():
                 limit=200,
             )
 
-            # Persist every analysis
-            log_analysis(analysis)
+            log_analysis(session, analysis)
             results.append(analysis)
 
-            # Alert ONLY when attention is critical
+            # Alert only if critical AND not recently alerted
             if analysis["summary"]["status"] == "This is important":
-                send_alert(analysis["summary"])
+                if should_send_alert(session, analysis["summary"]):
+                    send_alert(analysis["summary"])
 
-    # Rank results by attention first, then confidence
+    session.close()
+
+    # Rank results by attention, then confidence
     status_rank = {
         "This is important": 2,
         "Getting interesting": 1,
@@ -99,7 +119,6 @@ def run_scan():
         reverse=True,
     )
 
-    # Console output (top results only)
     print("\nTop results:\n")
     for a in results[:10]:
         s = a["summary"]
