@@ -1,3 +1,10 @@
-.venv/
+# Runtime logs
+logs/
+*.log
+
+# Python
 __pycache__/
-.env
+*.pyc
+
+# Virtual environment
+.venv/
