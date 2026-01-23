@@ -1,0 +1,30 @@
+
+================================================================================
+SCAN COMPLETE - 4 symbols analyzed
+================================================================================
+
+🟡 GETTING INTERESTING (1):
+  → BTC/USD    | Up       | Conf: 6/10 |  $89511.16
+
+⚪ LOW PRIORITY: 3 symbols
+
+================================================================================
+
+▶ /home/freshgm/market-scanner/.venv/bin/python scripts/run_ingest.py
+
+▶ /home/freshgm/market-scanner/.venv/bin/python scripts/run_scan.py
+
+================================================================================
+SCAN COMPLETE - 4 symbols analyzed
+================================================================================
+
+🟡 GETTING INTERESTING (1):
+  → BTC/USD    | Up       | Conf: 6/10 |  $89511.16
+
+⚪ LOW PRIORITY: 3 symbols
+
+================================================================================
+
+▶ /home/freshgm/market-scanner/.venv/bin/python scripts/run_ingest.py
+
+▶ /home/freshgm/market-scanner/.venv/bin/python scripts/run_scan.py

@@ -1,16 +1,13 @@
-from datetime import datetime, timedelta
-
 from scanner.config.watchlist import WATCHLIST
 from scanner.analysis.analyze_symbol import analyze_symbol
 from scanner.storage.db import SessionLocal
 from scanner.storage.analysis_models import AnalysisRun
-from scanner.alerts.discord import send_alert
-
-
-ALERT_COOLDOWN_MINUTES = 30
 
 
 def normalize_analysis_for_storage(analysis: dict) -> dict:
+    """
+    Convert all values to JSON-safe native Python types.
+    """
     summary = analysis["summary"]
     details = analysis["details"]
 
@@ -22,6 +19,7 @@ def normalize_analysis_for_storage(analysis: dict) -> dict:
         "details": {
             **details,
             "pause_detected": bool(details["pause_detected"]),
+            "volume_confirmed": bool(details.get("volume_confirmed", False)),
             "trend_slope": (
                 float(details["trend_slope"])
                 if details["trend_slope"] is not None
@@ -32,6 +30,26 @@ def normalize_analysis_for_storage(analysis: dict) -> dict:
                 if details["volatility"] is not None
                 else None
             ),
+            "atr": (
+                float(details["atr"])
+                if details.get("atr") is not None
+                else None
+            ),
+            "latest_close": (
+                float(details["latest_close"])
+                if details.get("latest_close") is not None
+                else None
+            ),
+            "latest_volume": (
+                float(details["latest_volume"])
+                if details.get("latest_volume") is not None
+                else None
+            ),
+            "reference_stop_distance": (
+                float(details["reference_stop_distance"])
+                if details.get("reference_stop_distance") is not None
+                else None
+            ),
             "distance_from_trend": [
                 float(x) for x in details.get("distance_from_trend", [])
             ],
@@ -39,10 +57,12 @@ def normalize_analysis_for_storage(analysis: dict) -> dict:
     }
 
 
-def log_analysis(session, analysis: dict):
+def log_analysis(analysis: dict):
     normalized = normalize_analysis_for_storage(analysis)
     s = normalized["summary"]
     d = normalized["details"]
+
+    session = SessionLocal()
 
     row = AnalysisRun(
         symbol=s["symbol"],
@@ -55,34 +75,18 @@ def log_analysis(session, analysis: dict):
         pause_detected=bool(d["pause_detected"]),
         trend_slope=d["trend_slope"],
         volatility=d["volatility"],
+        entry_price=d.get("latest_close"),
+        entry_volume=d.get("latest_volume"),
         summary=s,
         details=d,
     )
 
     session.add(row)
     session.commit()
-
-
-def should_send_alert(session, summary: dict) -> bool:
-    cutoff = datetime.utcnow() - timedelta(minutes=ALERT_COOLDOWN_MINUTES)
-
-    recent_alert = (
-        session.query(AnalysisRun)
-        .filter(
-            AnalysisRun.symbol == summary["symbol"],
-            AnalysisRun.timeframe == summary["timeframe"],
-            AnalysisRun.status == "This is important",
-            AnalysisRun.created_at >= cutoff,
-        )
-        .order_by(AnalysisRun.created_at.desc())
-        .first()
-    )
-
-    return recent_alert is None
+    session.close()
 
 
 def run_scan():
-    session = SessionLocal()
     results = []
 
     for asset_class, items in WATCHLIST.items():
@@ -94,17 +98,10 @@ def run_scan():
                 limit=200,
             )
 
-            log_analysis(session, analysis)
             results.append(analysis)
+            log_analysis(analysis)
 
-            # Alert only if critical AND not recently alerted
-            if analysis["summary"]["status"] == "This is important":
-                if should_send_alert(session, analysis["summary"]):
-                    send_alert(analysis["summary"])
-
-    session.close()
-
-    # Rank results by attention, then confidence
+    # Rank by attention first, then confidence
     status_rank = {
         "This is important": 2,
         "Getting interesting": 1,
@@ -119,18 +116,36 @@ def run_scan():
         reverse=True,
     )
 
-    print("\nTop results:\n")
-    for a in results[:10]:
-        s = a["summary"]
-        print(
-            f"{s['status']:18} | "
-            f"{s['confidence']:2}/10 | "
-            f"{s['asset_class']:6} | "
-            f"{s['symbol']:10} | "
-            f"{s['timeframe']:3} | "
-            f"{s['direction']:9} | "
-            f"{s['market_activity']}"
-        )
+    # Improved console output
+    print("\n" + "=" * 80)
+    print(f"SCAN COMPLETE - {len(results)} symbols analyzed")
+    print("=" * 80)
+
+    important = [r for r in results if r["summary"]["status"] == "This is important"]
+    interesting = [r for r in results if r["summary"]["status"] == "Getting interesting"]
+
+    if important:
+        print(f"\n🔴 THIS IS IMPORTANT ({len(important)}):")
+        for a in important:
+            s = a["summary"]
+            d = a["details"]
+            price = f"${d.get('latest_close', 0):.2f}" if d.get('latest_close') else "N/A"
+            stop = f"ATR: ${d.get('reference_stop_distance', 0):.2f}" if d.get('reference_stop_distance') else ""
+            print(f"  → {s['symbol']:10} | {s['direction']:8} | Conf: {s['confidence']}/10 | {price:>10} | {stop}")
+
+    if interesting:
+        print(f"\n🟡 GETTING INTERESTING ({len(interesting)}):")
+        for a in interesting:
+            s = a["summary"]
+            d = a["details"]
+            price = f"${d.get('latest_close', 0):.2f}" if d.get('latest_close') else "N/A"
+            print(f"  → {s['symbol']:10} | {s['direction']:8} | Conf: {s['confidence']}/10 | {price:>10}")
+
+    low_pri = len(results) - len(important) - len(interesting)
+    if low_pri > 0:
+        print(f"\n⚪ LOW PRIORITY: {low_pri} symbols")
+
+    print("\n" + "=" * 80)
 
 
 if __name__ == "__main__":

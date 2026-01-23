@@ -8,4 +8,8 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 
 def init_db():
-    Base.metadata.create_all(bind=engine)
+    from scanner.storage.models import Base as CandleBase
+    from scanner.storage.analysis_models import Base as AnalysisBase
+
+    CandleBase.metadata.create_all(bind=engine)
+    AnalysisBase.metadata.create_all(bind=engine)
