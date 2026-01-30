@@ -8,5 +8,6 @@ WATCHLIST = {
         {"symbol": "AAPL", "timeframe": "1d"},
         {"symbol": "MSFT", "timeframe": "1d"},
 	{"symbol": "SPY", "timeframe": "1d"},
+	{"symbol": "NVDA", "timeframe": "1d"},
     ],
 }
