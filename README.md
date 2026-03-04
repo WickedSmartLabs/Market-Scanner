@@ -1,218 +1,211 @@
 # Market Scanner
 
-A production-style market analysis and research system for studying short-term trading setups in stocks and crypto using disciplined, probability-based logic.
+A rule-based market research system that ingests financial market data, analyzes price structure, and scores potential setups based on market context and volatility conditions. The system is designed to help identify market states worth monitoring by combining structured data pipelines with explainable analytical logic.
 
-This project focuses on **signal quality, market context, and risk awareness**, not trade automation or prediction.
+The platform emphasizes signal quality, contextual awareness, and disciplined analysis rather than automated trading or prediction.
 
----
+# Problem
 
-## Overview
+Financial markets generate continuous streams of price data across many assets and timeframes. Monitoring these markets manually makes it difficult to consistently identify meaningful structural patterns such as emerging trends, consolidation phases, or volatility shifts.
 
-**Market Scanner** is a personal research platform designed to answer one question:
+Without a structured system, analysis often becomes reactive and subjective.
 
-> *Is this market state worth paying attention to right now?*
+A reliable research workflow requires automated data ingestion, consistent analysis rules, and persistent storage so that potential setups can be evaluated objectively over time.
 
-The system continuously ingests market data, analyzes price structure, scores setup quality, and logs results for later evaluation.  
-It is intentionally **human-in-the-loop** — providing context, not commands.
+# Solution
 
----
+Market Scanner provides a lightweight research platform that automates the collection and analysis of market data from multiple sources. The system ingests price data, computes structural indicators, evaluates rule-based criteria, and assigns a confidence score representing the quality of a potential setup.
 
-## Key Characteristics
+Rather than generating trade signals, the scanner highlights market conditions that may warrant attention. All results are stored in a database, allowing historical analysis and future evaluation of how different setups perform.
 
-- Not an auto-trading bot
-- No buy/sell signals
-- Rule-based and explainable logic
-- Persistent historical analysis
-- Designed for learning and evidence-building
+The system is intentionally human-in-the-loop: it provides context and structured observations while leaving decision-making to the user.
 
----
+# System Architecture
 
-## What the System Analyzes
+The platform follows a simple data pipeline architecture designed for reliability and repeatability.
 
-For each symbol and timeframe, the scanner evaluates:
+## System Architecture
 
-- **Trend direction** (up, down, sideways)
-- **Volatility regime** (quiet, normal, active)
-- **Pause / consolidation detection**
-- **Volume confirmation**
-- **ATR (Average True Range)** for reference risk sizing
-- **Price snapshot** at detection time
+```mermaid
+flowchart TD
 
-All results are scored and logged for later outcome analysis.
+A[Polygon API / Coinbase API] --> B[Data Ingestion Layer]
+B --> C[PostgreSQL Storage]
+C --> D[Market Analysis Engine]
+D --> E[Rule-Based Scoring System]
+E --> F[Terminal Output]
+E --> G[Historical Dataset for Research]
+```
 
----
+## Data Ingestion Layer
 
-## Confidence Scoring
+Market data is collected from external APIs and normalized into a consistent candle format.
 
-Each setup is assigned a **confidence score from 0 to 10**, based on rule-based criteria:
+## Data Storage
 
+Price data and analysis results are stored in PostgreSQL, enabling historical analysis and persistent research datasets.
+
+## Analysis Engine
+
+The system evaluates price structure using indicators such as trend direction, volatility context, consolidation detection, and volume behavior.
+
+## Scoring Engine
+
+Each potential setup is assigned a confidence score based on predefined rules that measure signal quality and market clarity.
+
+## Output Layer
+
+Scan results are printed to the terminal and stored in the database, making them available for later evaluation or integration into dashboards or alerts.
+
+# Pipeline Workflow
+
+1. Retrieve market data from Polygon (stocks) and Coinbase (crypto)
+2. Normalize and store price candles in PostgreSQL
+3. Compute market features including ATR, volatility regime, and volume context
+4. Detect structural patterns such as trend shifts and consolidation
+5. Score potential setups using rule-based confidence logic
+6. Store analysis results for historical evaluation
+
+# What the System Analyzes
+
+For each symbol and timeframe, the scanner evaluates several aspects of market structure:
+- Trend direction (up, down, sideways)
+- Volatility regime (quiet, normal, active)
+- Pause or consolidation detection
+- Volume confirmation
+- ATR (Average True Range) for reference risk sizing
+- Price snapshot at the time of detection
+
+These factors contribute to a confidence score used to rank the quality of the setup.
+
+# Confidence Scoring
+
+Each setup is assigned a confidence score ranging from 0 to 10.
+
+The score reflects rule-based evaluations of:
 - Trend clarity
 - Consolidation quality
 - Volatility context
 - Volume confirmation
 
-Scores are capped intentionally to avoid false precision.
+Scores intentionally remain capped to prevent false precision and maintain interpretability.
 
----
+#Status Labels
 
-## Status Labels
+The scanner converts confidence scores into simple attention levels.
 
-The scanner uses simple, human-readable status labels:
+| Status              | Meaning                             |
+| ------------------- | ----------------------------------- |
+| Low Priority        | Market noise or unclear structure   |
+| Getting Interesting | Market conditions worth monitoring  |
+| This Is Important   | High-quality setup requiring review |
 
-| Status | Meaning |
-|------|--------|
-| Low priority | Market noise or unclear structure |
-| Getting interesting | Worth monitoring |
-| This is important | High-quality setup requiring review |
+These labels represent research attention levels, not trading instructions.
 
-These represent **attention levels**, not trade instructions.
+# Research Universe
 
----
+The system analyzes a small, controlled universe of assets to maintain clean and interpretable data.
 
-## Research Universe
+**Stocks**
+- SPY — market regime proxy
+- AAPL
+- MSFT
 
-The universe is intentionally small and controlled to allow clean analysis.
+**Crypto**
+- BTC/USD — primary market driver
+- ETH/USD
+- SOL/USD — risk-on indicator
 
-### Stocks
-- **SPY** — market regime proxy
-- **AAPL**
-- **MSFT**
+The universe can be expanded as additional filters and research methods are introduced.
 
-### Crypto
-- **BTC/USD** — primary market driver
-- **ETH/USD**
-- **SOL/USD** — risk-on leader
+# Technology Stack
 
----
-
-## System Architecture
-Market APIs (Polygon, Coinbase)
-        ↓
-Data Ingestion (scheduled, idempotent)
-        ↓
-PostgreSQL (candles and analysis history)
-        ↓
-Market Analysis (trend, volatility, pause detection)
-        ↓
-Rule-Based Scoring (0–10 confidence)
-        ↓
-Outputs (terminal, database, alert-ready)
-
-
----
-
-## Technology Stack
-
-- Python 3
-- PostgreSQL
+**Data Processing**
+- Python
+- Pandas
 - SQLAlchemy
+
+**Data Infrastructure**
+- PostgreSQL
 - Docker / Docker Compose
-- Cron scheduling
-- Polygon.io (stocks)
-- Coinbase API (crypto)
 
----
+**Data Sourcs**
+- Polygon.io (equities)
+- Coinbase API (crypto markets)
 
-## Project Structure
-     src/
-      scanner/  
-        analysis/        # market logic
-        features/        # indicators (ATR, volume, pauses)
-        ingestion/       # API ingestion
-        storage/         # database models and sessions
-        config/          # watchlist and settings  
+**Scheduling**
+- Cron-based pipeline execution
 
-    scripts/
-      run_ingest.py
-      run_scan.py
-      run_pipeline.py
+# Project Structure
 
-    logs/
-      pipeline.log
+```
+src/
+  scanner/
+    analysis/        # market structure logic
+    features/        # indicators (ATR, volume, pauses)
+    ingestion/       # API ingestion
+    storage/         # database models and sessions
+    config/          # watchlist and configuration
 
+scripts/
+  run_ingest.py
+  run_scan.py
+  run_pipeline.py
 
----
+logs/
+  pipeline.log
+```
 
-## How It Runs
+# How It Runs
 
-- Ingestion and analysis run every five minutes
-- Managed via cron
-- Results are:
-  - Printed to the terminal
-  - Stored in PostgreSQL
-  - Ready for alerts or dashboards
+The system operates as a scheduled research pipeline.
 
-Once configured, the system runs unattended.
+1. Data ingestion retrieves market data from external APIs.
+2. The analysis engine processes each asset and timeframe.
+3. Confidence scores and status labels are generated.
+4. Results are printed to the terminal and stored in PostgreSQL.
 
----
+The pipeline runs every five minutes via cron scheduling and can operate unattended once configured.
 
-## Example Output
-    SCAN COMPLETE - 6 symbols analyzed
+# Example Output
 
-    GETTING INTERESTING
-    BTC/USD | Down | Confidence: 6/10 | $89,430
-    ETH/USD | Down | Confidence: 5/10 | $2,935
+SCAN COMPLETE - 6 symbols analyzed
 
-    LOW PRIORITY: 4 symbols
+GETTING INTERESTING
+BTC/USD | Down | Confidence: 6/10 | $89,430
+ETH/USD | Down | Confidence: 5/10 | $2,935
 
+LOW PRIORITY: 4 symbols
 
----
+# Data Persistence
 
-## Outcome Evaluation (Planned)
+All scan results and analysis outputs are stored in PostgreSQL, enabling:
+- Historical signal tracking
+- Forward return analysis
+- Performance comparison by confidence level
+- Dataset generation for future research or modeling
 
-The database schema already supports:
+# Outcome Evaluation (Planned)
 
+The database schema already supports additional research capabilities including:
 - Forward return tracking
 - Outcome labeling
-- Performance analysis by confidence level
+- Performance evaluation by confidence level
 
-These features are intentionally deferred until sufficient real data accumulates.
+These features will be activated once sufficient historical data accumulates.
 
----
+# Future Improvements
 
-## What This Project Is Not
+Planned enhancements include:
+- Outcome evaluation and expectancy analysis
+- Interactive dashboards for monitoring signals
+- Expanded asset universe using liquidity filters
+- Optional alerting integrations
+- Further research into volatility regime behavior
 
-- Not an automated trading system
-- Not a prediction engine
-- Not financial advice
-- Not optimized for hype or overfitting
+Machine learning techniques may be considered if rule-based methods reach clear limitations.
 
----
+# Disclaimer
 
-## Future Extensions
-
-Planned, evidence-driven expansions:
-
-- Outcome evaluation and expectancy metrics
-- Interactive dashboard
-- Options overlays (after underlying edge is proven)
-- Universe expansion using liquidity and volatility filters
-
-Machine learning will only be considered if rule-based methods plateau.
-
----
-
-## About the Author
-
-This project was built by a developer early in their journey into data engineering, market systems, and quantitative analysis.
-
-The primary goal of this work is learning by building — designing a real, end-to-end system to better understand how market data flows, how trading setups can be evaluated objectively, and how disciplined research differs from speculation.
-
-Rather than following tutorials or building one-off scripts, this project emphasizes:
-
-  - Building production-style pipelines from scratch
-
-  - Using real APIs, databases, and scheduling tools
-
-  - Writing explainable, rule-based logic
-
-  - Letting data accumulate before drawing conclusions
-
-The system reflects an intentional focus on foundational skills, systems thinking, and responsible experimentation, with the expectation that both the codebase and the author’s understanding will continue to evolve over time.
-
----
-
-## Disclaimer
-
-This project is for educational and research purposes only.  
-All trading decisions remain the responsibility of the user.
+This project is intended for research and educational purposes only.
+It is not an automated trading system and does not provide financial advice.
