@@ -11,3 +11,7 @@ __pycache__/
 .env
 logs/
 nohup.out
+.env
+logs/
+nohup.out
+nano
