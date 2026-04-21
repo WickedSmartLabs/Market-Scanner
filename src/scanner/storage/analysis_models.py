@@ -13,30 +13,28 @@ class AnalysisRun(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
-
     symbol: Mapped[str] = mapped_column(String, index=True)
     asset_class: Mapped[str] = mapped_column(String, index=True)
     timeframe: Mapped[str] = mapped_column(String, index=True)
-
     status: Mapped[str] = mapped_column(String, index=True)
     confidence: Mapped[int] = mapped_column(Integer, index=True)
-
     trend_regime: Mapped[str] = mapped_column(String)
     volatility_regime: Mapped[str] = mapped_column(String)
     pause_detected: Mapped[bool] = mapped_column(Boolean)
-
     trend_slope: Mapped[float | None] = mapped_column(Float, nullable=True)
     volatility: Mapped[float | None] = mapped_column(Float, nullable=True)
-
-    # NEW: Price context
     entry_price: Mapped[float | None] = mapped_column(Float, nullable=True)
     entry_volume: Mapped[float | None] = mapped_column(Float, nullable=True)
-
-    # NEW: Outcome tracking
     outcome_evaluated: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     outcome: Mapped[str | None] = mapped_column(String, nullable=True)
     forward_return_15m: Mapped[float | None] = mapped_column(Float, nullable=True)
     forward_return_1h: Mapped[float | None] = mapped_column(Float, nullable=True)
-
     summary: Mapped[dict] = mapped_column(JSONB)
     details: Mapped[dict] = mapped_column(JSONB)
+    upper_wick_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
+    lower_wick_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
+    body_strength: Mapped[float | None] = mapped_column(Float, nullable=True)
+    candles_confirming: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    range_expansion: Mapped[str | None] = mapped_column(String, nullable=True)
+    vwap_relationship: Mapped[str | None] = mapped_column(String, nullable=True)
+    options_fit: Mapped[str | None] = mapped_column(String, nullable=True)
